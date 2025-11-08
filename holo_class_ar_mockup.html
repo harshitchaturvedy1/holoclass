@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>HoloClass – AR Mockup (GLB Version)</title>
+
+<!-- Load model-viewer -->
+<script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+
+<style>
+  :root {
+    --bg:#071226;--card:#0b1220;--muted:#98a8b9;
+    --accent:#60a5fa;--glass:rgba(255,255,255,0.03)
+  }
+  * { box-sizing:border-box; font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial }
+  body {
+    margin:0; background:linear-gradient(180deg,#041026,#071226);
+    color:#e6eef6; padding:20px;
+  }
+  .container {
+    max-width:1100px; margin:0 auto;
+    display:grid; grid-template-columns:1fr 360px; gap:20px;
+  }
+  header {
+    grid-column:1/-1; display:flex; align-items:center; gap:12px;
+  }
+  .logo {
+    width:52px;height:52px;border-radius:10px;
+    background:linear-gradient(135deg,var(--accent),#8b5cf6);
+    display:flex;align-items:center;justify-content:center;font-weight:800
+  }
+  h1 { margin:0;font-size:18px }
+  p.lead { margin:4px 0 0;color:var(--muted);font-size:13px }
+  .card {
+    background:linear-gradient(180deg,var(--card),rgba(8,14,24,0.6));
+    padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)
+  }
+  .stage {
+    height:520px;border-radius:10px;overflow:hidden;
+    position:relative;background:#02060a;border:1px solid rgba(255,255,255,0.02)
+  }
+  video#cam { width:100%;height:100%;object-fit:cover;background:#000 }
+  .overlayModel {
+    position:absolute;left:50%;top:50%;
+    width:320px;height:320px;pointer-events:auto;
+    display:none;align-items:center;justify-content:center;
+    cursor:grab;
+  }
+  .overlayModel.active { display:flex }
+  .controls { display:flex;gap:8px;margin-top:10px }
+  .markerRow { display:flex;gap:10px;margin-top:12px }
+  .marker {
+    width:84px;height:84px;border-radius:8px;background:#ffffff10;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;border:2px dashed rgba(255,255,255,0.03);
+    transition:all 0.2s
+  }
+  .marker:hover {
+    background:#ffffff15;border-color:var(--accent);
+    transform:translateY(-2px)
+  }
+  .marker.custom {
+    border:2px solid rgba(139,92,246,0.3);
+    background:rgba(139,92,246,0.1);
+    flex-direction:column;gap:4px;font-size:10px;
+    color:var(--muted);font-weight:600
+  }
+  .muted { color:var(--muted);font-size:13px }
+  .btn {
+    background:var(--accent);color:#031024;
+    padding:8px 10px;border-radius:8px;border:none;
+    cursor:pointer;font-weight:700;font-size:12px;
+  }
+  .small { font-size:12px;padding:6px 8px }
+  .rightCol { display:flex;flex-direction:column;gap:12px }
+  .step { font-size:13px;color:var(--muted) }
+  .footer {
+    grid-column:1/-1;text-align:center;color:var(--muted);
+    font-size:13px;margin-top:6px
+  }
+  .positionPanel {
+    position:absolute;bottom:16px;left:50%;transform:translateX(-50%);
+    background:rgba(11,18,32,0.95);backdrop-filter:blur(12px);
+    border:1px solid rgba(255,255,255,0.08);border-radius:12px;
+    padding:16px 20px;min-width:320px;display:none;z-index:100;
+    box-shadow:0 8px 32px rgba(0,0,0,0.4);cursor:move;
+    transition:box-shadow 0.2s
+  }
+  .positionPanel.active { display:block }
+  .positionPanel:hover { box-shadow:0 8px 32px rgba(0,0,0,0.6) }
+  .positionPanel.dragging { cursor:grabbing }
+  .sliderGroup { margin:10px 0 }
+  .sliderGroup label {
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600
+  }
+  .sliderGroup input[type="range"] {
+    width:100%;height:6px;border-radius:3px;
+    background:rgba(255,255,255,0.1);outline:none;
+    -webkit-appearance:none;appearance:none;cursor:pointer
+  }
+  .sliderGroup input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance:none;appearance:none;
+    width:16px;height:16px;border-radius:50%;
+    background:var(--accent);cursor:pointer;
+    box-shadow:0 2px 6px rgba(96,165,250,0.4)
+  }
+  .sliderGroup input[type="range"]::-moz-range-thumb {
+    width:16px;height:16px;border-radius:50%;
+    background:var(--accent);cursor:pointer;border:none;
+    box-shadow:0 2px 6px rgba(96,165,250,0.4)
+  }
+  .panelHeader {
+    display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:12px;padding-bottom:10px;
+    border-bottom:1px solid rgba(255,255,255,0.06);
+    cursor:grab;user-select:none
+  }
+  .panelHeader:active { cursor:grabbing }
+  .panelTitle { font-size:13px;font-weight:700;color:#e6eef6 }
+  .dragIcon {
+    color:var(--muted);font-size:16px;line-height:1
+  }
+  .uploadSection {
+    background:rgba(255,255,255,0.02);border-radius:8px;
+    padding:12px;margin-top:12px;border:1px dashed rgba(255,255,255,0.1)
+  }
+  .uploadSection strong { font-size:13px;display:block;margin-bottom:8px }
+  .fileInput {
+    display:none
+  }
+  .uploadBtn {
+    background:rgba(139,92,246,0.2);color:#c4b5fd;
+    border:1px solid rgba(139,92,246,0.3);
+    padding:8px 12px;border-radius:6px;cursor:pointer;
+    font-size:12px;font-weight:600;display:inline-block;
+    transition:all 0.2s;width:100%;text-align:center
+  }
+  .uploadBtn:hover { background:rgba(139,92,246,0.3) }
+  .fileName {
+    font-size:11px;color:var(--muted);margin-top:6px;
+    font-style:italic
+  }
+  .quizOverlay {
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    background:rgba(11,18,32,0.98);backdrop-filter:blur(16px);
+    border:1px solid rgba(255,255,255,0.1);border-radius:16px;
+    padding:24px;max-width:400px;width:90%;display:none;z-index:200;
+    box-shadow:0 12px 48px rgba(0,0,0,0.6)
+  }
+  .quizOverlay.active { display:block }
+  .quizQuestion {
+    font-size:16px;font-weight:700;margin-bottom:16px;
+    color:#e6eef6;line-height:1.4
+  }
+  .quizOptions {
+    display:flex;flex-direction:column;gap:10px
+  }
+  .quizOption {
+    background:rgba(255,255,255,0.04);border:2px solid rgba(255,255,255,0.08);
+    padding:12px 16px;border-radius:10px;cursor:pointer;
+    font-size:14px;transition:all 0.2s;text-align:left
+  }
+  .quizOption:hover {
+    background:rgba(255,255,255,0.08);border-color:var(--accent)
+  }
+  .quizOption.correct {
+    background:rgba(34,197,94,0.2);border-color:#22c55e;
+    color:#86efac
+  }
+  .quizOption.incorrect {
+    background:rgba(239,68,68,0.2);border-color:#ef4444;
+    color:#fca5a5
+  }
+  .quizFeedback {
+    margin-top:16px;padding:12px;border-radius:8px;
+    font-size:13px;display:none
+  }
+  .quizFeedback.show { display:block }
+  .quizFeedback.correct {
+    background:rgba(34,197,94,0.1);color:#86efac;
+    border:1px solid rgba(34,197,94,0.3)
+  }
+  .quizFeedback.incorrect {
+    background:rgba(239,68,68,0.1);color:#fca5a5;
+    border:1px solid rgba(239,68,68,0.3)
+  }
+  .quizClose {
+    margin-top:16px;background:var(--accent);color:#031024;
+    padding:10px;border-radius:8px;border:none;cursor:pointer;
+    font-weight:700;width:100%;font-size:13px
+  }
+  .photoBtn {
+    position:absolute;top:16px;right:16px;
+    background:rgba(11,18,32,0.9);backdrop-filter:blur(12px);
+    border:1px solid rgba(255,255,255,0.1);
+    width:48px;height:48px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;z-index:50;transition:all 0.2s;
+    box-shadow:0 4px 12px rgba(0,0,0,0.3)
+  }
+  .photoBtn:hover {
+    background:rgba(96,165,250,0.2);border-color:var(--accent);
+    transform:scale(1.05)
+  }
+  .photoBtn svg {
+    width:24px;height:24px;stroke:var(--accent);stroke-width:2
+  }
+  .photoFlash {
+    position:absolute;top:0;left:0;width:100%;height:100%;
+    background:white;opacity:0;pointer-events:none;
+    border-radius:10px;z-index:999
+  }
+  .photoFlash.active {
+    animation:flash 0.3s ease-out
+  }
+  @keyframes flash {
+    0% { opacity:0 }
+    50% { opacity:0.8 }
+    100% { opacity:0 }
+  }
+  .btnGroup { display:flex;gap:8px;margin-top:14px }
+  .btnSecondary {
+    background:rgba(255,255,255,0.06);color:#e6eef6;
+    padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);
+    cursor:pointer;font-weight:600;font-size:12px;flex:1;
+    transition:all 0.2s
+  }
+  .btnSecondary:hover { background:rgba(255,255,255,0.1) }
+  .btnPrimary {
+    background:var(--accent);color:#031024;
+    padding:8px 14px;border-radius:8px;border:none;
+    cursor:pointer;font-weight:700;font-size:12px;flex:1;
+    transition:all 0.2s
+  }
+  .btnPrimary:hover { background:#7bb9fb }
+  .dragHint {
+    font-size:11px;color:var(--muted);text-align:center;
+    margin-top:8px;font-style:italic
+  }
+  @media (max-width:980px){
+    .container{grid-template-columns:1fr}
+    .stage{height:420px}
+    .positionPanel{min-width:280px;padding:14px 16px}
+  }
+</style>
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">HC</div>
+      <div>
+        <h1>HoloClass – AR Learning Mockup (GLB)</h1>
+        <p class="lead">Simulates marker-based AR using your own .glb 3D models.</p>
+      </div>
+    </header>
+
+    <section class="card">
+      <div class="muted">Live stage – allow camera permission to preview</div>
+      <div class="stage" id="stage">
+        <video id="cam" autoplay playsinline></video>
+
+        <!-- Photo Button -->
+        <button class="photoBtn" id="photoBtn" title="Take Photo">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+        </button>
+
+        <!-- Photo Flash Effect -->
+        <div class="photoFlash" id="photoFlash"></div>
+
+        <!-- Overlay 3D viewer -->
+        <div id="overlay" class="overlayModel">
+          <model-viewer
+            id="myModel"
+            src="models/atom.glb"
+            alt="3D model"
+            camera-controls
+            auto-rotate
+            shadow-intensity="1"
+            style="width:300px; height:300px; border-radius:16px; background:rgba(255,255,255,0.03);"
+          ></model-viewer>
+        </div>
+
+        <!-- Position Control Panel -->
+        <div id="positionPanel" class="positionPanel">
+          <div class="panelHeader" id="panelHeader">
+            <span class="panelTitle">Position & Rotation</span>
+            <span class="dragIcon">⋮⋮</span>
+          </div>
+          
+          <div class="sliderGroup">
+            <label>
+              <span>Tilt X</span>
+              <span id="tiltXVal">0°</span>
+            </label>
+            <input type="range" id="tiltX" min="-180" max="180" value="0">
+          </div>
+          
+          <div class="sliderGroup">
+            <label>
+              <span>Tilt Y</span>
+              <span id="tiltYVal">0°</span>
+            </label>
+            <input type="range" id="tiltY" min="-180" max="180" value="0">
+          </div>
+          
+          <div class="sliderGroup">
+            <label>
+              <span>Tilt Z</span>
+              <span id="tiltZVal">0°</span>
+            </label>
+            <input type="range" id="tiltZ" min="-180" max="180" value="0">
+          </div>
+
+          <div class="dragHint">💡 Drag the model to reposition</div>
+          
+          <div class="btnGroup">
+            <button class="btnSecondary" id="resetPos">Reset</button>
+            <button class="btnPrimary" id="lockPos">Lock Position</button>
+          </div>
+        </div>
+
+        <!-- Quiz Overlay -->
+        <div id="quizOverlay" class="quizOverlay">
+          <div class="quizQuestion" id="quizQuestion">What are atoms made of?</div>
+          <div class="quizOptions" id="quizOptions">
+            <div class="quizOption" data-correct="false">Only electrons</div>
+            <div class="quizOption" data-correct="true">Protons, neutrons, and electrons</div>
+            <div class="quizOption" data-correct="false">Only protons</div>
+            <div class="quizOption" data-correct="false">Only neutrons</div>
+          </div>
+          <div class="quizFeedback" id="quizFeedback"></div>
+          <button class="quizClose" id="quizClose">Continue Learning</button>
+        </div>
+      </div>
+
+      <div class="markerRow">
+        <div class="marker" data-marker="atom" title="Atom marker">
+          <svg width="60" height="60" viewBox="0 0 100 100">
+            <rect x="6" y="6" width="88" height="88" rx="8"
+              stroke="#fff" stroke-opacity="0.12"/>
+            <path d="M50 25c15 0 27 12 27 27s-12 27-27 27-27-12-27-27S35 25 50 25z"
+              stroke="#9be7ff" stroke-width="3" stroke-opacity="0.9"/>
+          </svg>
+        </div>
+        <div class="marker" data-marker="cell" title="Cell marker">
+          <svg width="60" height="60" viewBox="0 0 100 100">
+            <rect x="6" y="6" width="88" height="88" rx="8"
+              stroke="#fff" stroke-opacity="0.12"/>
+            <circle cx="50" cy="50" r="22"
+              stroke="#7cf28b" stroke-width="3" stroke-opacity="0.9"/>
+          </svg>
+        </div>
+        <div class="marker" data-marker="circuit" title="Circuit marker">
+          <svg width="60" height="60" viewBox="0 0 100 100">
+            <rect x="6" y="6" width="88" height="88" rx="8"
+              stroke="#fff" stroke-opacity="0.12"/>
+            <path d="M30 70L70 30M70 70L30 30"
+              stroke="#ffd375" stroke-width="3" stroke-opacity="0.9"/>
+          </svg>
+        </div>
+        <div class="marker custom" id="customMarker" title="Custom model" style="display:none">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+          </svg>
+          <span>CUSTOM</span>
+        </div>
+      </div>
+
+      <div class="controls" style="margin-top:12px">
+        <button class="btn small" id="adjustPos">Adjust Position</button>
+        <button class="btn small" id="hide">Hide hologram</button>
+        <button class="btn small" id="showQuiz">Pop Quiz</button>
+        <div style="flex:1" class="muted" id="status">Status: Idle – click a marker to simulate AR</div>
+      </div>
+    </section>
+
+    <aside class="card rightCol">
+      <strong>Quick setup:</strong>
+      <div class="step">• Place your .glb models in a <code>models/</code> folder next to this HTML file.</div>
+      <div class="step">• Name them <code>atom.glb</code>, <code>cell.glb</code>, and <code>circuit.glb</code>.</div>
+      <div class="step">• Click markers below to preview each model.</div>
+      
+      <div class="uploadSection">
+        <strong>Upload Custom Model</strong>
+        <input type="file" id="fileInput" class="fileInput" accept=".glb,.gltf">
+        <label for="fileInput" class="uploadBtn">Choose .glb file</label>
+        <div class="fileName" id="fileName">No file selected</div>
+      </div>
+    </aside>
+
+    <div class="footer">HoloClass Mockup – GLB Integration by Harshit</div>
+  </div>
+
+<script>
+  const video = document.getElementById('cam');
+  const overlay = document.getElementById('overlay');
+  const status = document.getElementById('status');
+  const markers = document.querySelectorAll('.marker');
+  const hideBtn = document.getElementById('hide');
+  const adjustPosBtn = document.getElementById('adjustPos');
+  const positionPanel = document.getElementById('positionPanel');
+  const lockPosBtn = document.getElementById('lockPos');
+  const resetPosBtn = document.getElementById('resetPos');
+  const viewer = document.getElementById('myModel');
+  const fileInput = document.getElementById('fileInput');
+  const fileName = document.getElementById('fileName');
+  const showQuizBtn = document.getElementById('showQuiz');
+  const quizOverlay = document.getElementById('quizOverlay');
+  const quizClose = document.getElementById('quizClose');
+  const quizOptions = document.querySelectorAll('.quizOption');
+  const quizFeedback = document.getElementById('quizFeedback');
+  const customMarker = document.getElementById('customMarker');
+  const photoBtn = document.getElementById('photoBtn');
+  const photoFlash = document.getElementById('photoFlash');
+  const stage = document.getElementById('stage');
+
+  // Tilt controls
+  const tiltX = document.getElementById('tiltX');
+  const tiltY = document.getElementById('tiltY');
+  const tiltZ = document.getElementById('tiltZ');
+  const tiltXVal = document.getElementById('tiltXVal');
+  const tiltYVal = document.getElementById('tiltYVal');
+  const tiltZVal = document.getElementById('tiltZVal');
+
+  let isDragging = false;
+  let dragStartX, dragStartY;
+  let currentX = 0, currentY = 0;
+  let rotX = 0, rotY = 0, rotZ = 0;
+  let customModelUrl = null;
+
+  // Panel dragging
+  let isPanelDragging = false;
+  let panelStartX, panelStartY;
+  let panelX = 0, panelY = 0;
+  const panelHeader = document.getElementById('panelHeader');
+
+  // Start camera
+  async function startCam() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      video.srcObject = stream;
+      status.textContent = 'Status: Camera active – click a marker to show hologram';
+    } catch (e) {
+      status.textContent = 'Status: Camera unavailable – click a marker to simulate.';
+    }
+  }
+  startCam();
+
+  // Marker click
+  markers.forEach(m => m.addEventListener('click', () => {
+    const type = m.dataset.marker;
+    showHologram(type);
+  }));
+
+  // Custom marker click
+  customMarker.addEventListener('click', () => {
+    if (customModelUrl) {
+      showHologram('custom');
+    }
+  });
+
+function showHologram(type) {
+    overlay.classList.add('active');
+    if (type === 'atom') viewer.src = 'models/atom.glb';
+    else if (type === 'cell') viewer.src = 'cell.glb';
+    else if (type === 'circuit') viewer.src = 'electric_circuit.glb';
+    status.textContent = 'Status: Hologram (' + type + ') visible – click Adjust Position';
+    applyTransform();
+  }
+
+  hideBtn.addEventListener('click', () => {
+    overlay.classList.remove('active');
+    positionPanel.classList.remove('active');
+    status.textContent = 'Status: Hidden';
+  });
+
+  // Adjust Position button
+  adjustPosBtn.addEventListener('click', () => {
+    if (!overlay.classList.contains('active')) {
+      status.textContent = 'Status: Show a hologram first';
+      return;
+    }
+    positionPanel.classList.add('active');
+    status.textContent = 'Status: Adjusting position – drag model or use sliders';
+  });
+
+  // Lock Position button
+  lockPosBtn.addEventListener('click', () => {
+    positionPanel.classList.remove('active');
+    status.textContent = 'Status: Position locked';
+  });
+
+  // Reset Position button
+  resetPosBtn.addEventListener('click', () => {
+    currentX = 0;
+    currentY = 0;
+    rotX = 0;
+    rotY = 0;
+    rotZ = 0;
+    tiltX.value = 0;
+    tiltY.value = 0;
+    tiltZ.value = 0;
+    tiltXVal.textContent = '0°';
+    tiltYVal.textContent = '0°';
+    tiltZVal.textContent = '0°';
+    applyTransform();
+    status.textContent = 'Status: Position reset';
+  });
+
+  // Tilt sliders
+  tiltX.addEventListener('input', (e) => {
+    rotX = e.target.value;
+    tiltXVal.textContent = rotX + '°';
+    applyTransform();
+  });
+
+  tiltY.addEventListener('input', (e) => {
+    rotY = e.target.value;
+    tiltYVal.textContent = rotY + '°';
+    applyTransform();
+  });
+
+  tiltZ.addEventListener('input', (e) => {
+    rotZ = e.target.value;
+    tiltZVal.textContent = rotZ + '°';
+    applyTransform();
+  });
+
+  // Drag functionality
+  overlay.addEventListener('mousedown', startDrag);
+  overlay.addEventListener('touchstart', startDrag, { passive: false });
+  document.addEventListener('mousemove', drag);
+  document.addEventListener('touchmove', drag, { passive: false });
+  document.addEventListener('mouseup', stopDrag);
+  document.addEventListener('touchend', stopDrag);
+
+  function startDrag(e) {
+    if (!positionPanel.classList.contains('active')) return;
+    isDragging = true;
+    const touch = e.touches ? e.touches[0] : e;
+    dragStartX = touch.clientX - currentX;
+    dragStartY = touch.clientY - currentY;
+    overlay.style.cursor = 'grabbing';
+  }
+
+  function drag(e) {
+    if (!isDragging) return;
+    e.preventDefault();
+    const touch = e.touches ? e.touches[0] : e;
+    currentX = touch.clientX - dragStartX;
+    currentY = touch.clientY - dragStartY;
+    applyTransform();
+  }
+
+  function stopDrag() {
+    isDragging = false;
+    overlay.style.cursor = 'grab';
+  }
+
+  function applyTransform() {
+    overlay.style.transform = `translate(calc(-50% + ${currentX}px), calc(-50% + ${currentY}px)) rotateX(${rotX}deg) rotateY(${rotY}deg) rotateZ(${rotZ}deg)`;
+  }
+
+  // Panel drag functionality
+  panelHeader.addEventListener('mousedown', startPanelDrag);
+  panelHeader.addEventListener('touchstart', startPanelDrag, { passive: false });
+  document.addEventListener('mousemove', dragPanel);
+  document.addEventListener('touchmove', dragPanel, { passive: false });
+  document.addEventListener('mouseup', stopPanelDrag);
+  document.addEventListener('touchend', stopPanelDrag);
+
+  function startPanelDrag(e) {
+    e.stopPropagation();
+    isPanelDragging = true;
+    const touch = e.touches ? e.touches[0] : e;
+    panelStartX = touch.clientX - panelX;
+    panelStartY = touch.clientY - panelY;
+    positionPanel.classList.add('dragging');
+  }
+
+  function dragPanel(e) {
+    if (!isPanelDragging) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const touch = e.touches ? e.touches[0] : e;
+    panelX = touch.clientX - panelStartX;
+    panelY = touch.clientY - panelStartY;
+    positionPanel.style.transform = `translate(calc(-50% + ${panelX}px), ${panelY}px)`;
+  }
+
+  function stopPanelDrag() {
+    isPanelDragging = false;
+    positionPanel.classList.remove('dragging');
+  }
+
+  // File upload functionality
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      fileName.textContent = `Selected: ${file.name}`;
+      // Revoke old URL if exists
+      if (customModelUrl) {
+        URL.revokeObjectURL(customModelUrl);
+      }
+      customModelUrl = URL.createObjectURL(file);
+      customMarker.style.display = 'flex';
+      status.textContent = `Status: Custom model ready - click the CUSTOM marker to view`;
+      
+      // Automatically show the custom model
+      viewer.src = customModelUrl;
+      overlay.classList.add('active');
+      status.textContent = `Status: Custom model loaded (${file.name})`;
+      applyTransform();
+    }
+  });
+
+  // Quiz functionality
+  showQuizBtn.addEventListener('click', () => {
+    if (!overlay.classList.contains('active')) {
+      status.textContent = 'Status: Show a hologram first to take the quiz';
+      return;
+    }
+    quizOverlay.classList.add('active');
+    resetQuiz();
+  });
+
+  quizClose.addEventListener('click', () => {
+    quizOverlay.classList.remove('active');
+  });
+
+  quizOptions.forEach(option => {
+    option.addEventListener('click', function() {
+      if (this.classList.contains('correct') || this.classList.contains('incorrect')) return;
+      
+      const isCorrect = this.dataset.correct === 'true';
+      
+      quizOptions.forEach(opt => {
+        opt.style.pointerEvents = 'none';
+        if (opt.dataset.correct === 'true') {
+          opt.classList.add('correct');
+        }
+      });
+      
+      if (isCorrect) {
+        this.classList.add('correct');
+        quizFeedback.textContent = '✓ Correct! Atoms consist of protons and neutrons in the nucleus, with electrons orbiting around.';
+        quizFeedback.className = 'quizFeedback show correct';
+      } else {
+        this.classList.add('incorrect');
+        quizFeedback.textContent = '✗ Not quite. Atoms are made of protons, neutrons, and electrons working together.';
+        quizFeedback.className = 'quizFeedback show incorrect';
+      }
+    });
+  });
+
+  function resetQuiz() {
+    quizOptions.forEach(opt => {
+      opt.classList.remove('correct', 'incorrect');
+      opt.style.pointerEvents = 'auto';
+    });
+    quizFeedback.classList.remove('show', 'correct', 'incorrect');
+  }
+
+  // Photo capture functionality
+  photoBtn.addEventListener('click', () => {
+    // Create canvas to capture the stage
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    
+    canvas.width = stage.offsetWidth;
+    canvas.height = stage.offsetHeight;
+    
+    // Draw video frame
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // If model is visible, we need to capture it too
+    // Note: model-viewer uses WebGL so we can't directly capture it to canvas
+    // This will capture the video/camera feed
+    
+    // Flash effect
+    photoFlash.classList.add('active');
+    setTimeout(() => photoFlash.classList.remove('active'), 300);
+    
+    // Convert to image and download
+    canvas.toBlob((blob) => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `holoclass-capture-${Date.now()}.png`;
+      link.click();
+      URL.revokeObjectURL(url);
+      status.textContent = 'Status: Photo saved!';
+      setTimeout(() => {
+        status.textContent = 'Status: Camera active';
+      }, 2000);
+    });
+  });
+</script>
+</body>
+</html>
