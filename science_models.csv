@@ -1,0 +1,3 @@
+title,modelUrl,explanation,quizQuestion,quizOptions,quizAnswerIndex
+"Atoms","https://example.com/atom.glb","Atoms are the building blocks","What are atoms?","Molecules|Building blocks|Cells|Tissues","1"
+"DNA","https://example.com/dna.glb","DNA contains genetic info","What does DNA store?","Water|Genetic info|Energy|Light","1"

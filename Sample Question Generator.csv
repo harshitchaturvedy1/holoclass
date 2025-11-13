@@ -1,0 +1,3 @@
+title,modelUrl,explanation,quizQuestion,quizOptions,quizAnswerIndex
+Example: Atom,https://example.com/atom.glb,Atoms are the building blocks of matter,What are atoms?,Molecules|Building blocks|Cells|Tissues,1
+Example: DNA,https://example.com/dna.glb,DNA contains genetic information,What does DNA store?,Water|Genetic info|Energy|Light,1

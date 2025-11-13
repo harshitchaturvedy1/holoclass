@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HoloClass Lesson Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0f172a 100%);
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+    input, textarea {
+      font-family: inherit;
+    }
+    .header-buttons {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    @media (max-width: 768px) {
+      .header-buttons {
+        width: 100%;
+        justify-content: stretch;
+      }
+      .header-buttons button {
+        flex: 1;
+      }
+    }
+  </style>
+</head>
+<body class="p-6">
+  <div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-8 mb-6 border border-slate-700/50">
+      <div class="mb-4">
+        <div class="flex items-start justify-between gap-4 mb-4 flex-wrap">
+          <div class="flex-1 min-w-64">
+            <h1 class="text-3xl font-bold text-white mb-2">🎨 HoloClass Lesson Generator</h1>
+            <p class="text-slate-400">Create interactive AR lessons with quizzes - Export as CSV</p>
+          </div>
+          <div class="header-buttons">
+            <button
+              onclick="loadSampleData()"
+              class="flex items-center gap-2 px-4 py-2 bg-purple-600/20 text-purple-300 border border-purple-500/30 rounded-lg hover:bg-purple-600/30 transition-all whitespace-nowrap">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+              </svg>
+              Load Sample
+            </button>
+            <button
+              onclick="previewCSV()"
+              class="flex items-center gap-2 px-4 py-2 bg-slate-700/50 text-slate-300 border border-slate-600 rounded-lg hover:bg-slate-700 transition-all whitespace-nowrap">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+              Preview
+            </button>
+            <button
+              onclick="downloadCSV()"
+              class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-semibold whitespace-nowrap">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+              Download CSV
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+        <p class="text-sm text-blue-200">
+          <strong>Tip:</strong> Add your lessons below, then download the CSV file. Upload it to HoloClass using Teacher Mode → Import Lessons from CSV.
+        </p>
+      </div>
+    </div>
+
+    <!-- Lessons Container -->
+    <div id="lessonsContainer" class="space-y-6"></div>
+
+    <!-- Add Lesson Button -->
+    <button
+      onclick="addLesson()"
+      class="w-full mt-6 flex items-center justify-center gap-2 px-6 py-4 bg-slate-700/50 text-white border-2 border-dashed border-slate-600 rounded-2xl hover:bg-slate-700 hover:border-blue-500 transition-all">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      <span class="font-semibold">Add Another Lesson</span>
+    </button>
+
+    <!-- Footer Info -->
+    <div class="mt-8 p-6 bg-slate-800/30 rounded-xl border border-slate-700/50">
+      <h3 class="text-white font-semibold mb-2">How to Use:</h3>
+      <ol class="text-slate-400 text-sm space-y-2 list-decimal list-inside">
+        <li>Fill in the lesson details above (title is required)</li>
+        <li>Add quiz questions with multiple choice answers</li>
+        <li>Click "Download CSV" to get your file</li>
+        <li>Open HoloClass and go to Teacher Mode</li>
+        <li>Click "Import Lessons from CSV" and upload your file</li>
+      </ol>
+      
+      <div class="mt-4 pt-4 border-t border-slate-700">
+        <h3 class="text-white font-semibold mb-2">Free 3D Models:</h3>
+        <ul class="text-slate-400 text-sm space-y-1">
+          <li>• <a href="https://sketchfab.com" target="_blank" class="text-blue-400 hover:underline">Sketchfab.com</a> - Huge collection of free models</li>
+          <li>• <a href="https://modelviewer.dev/examples/" target="_blank" class="text-blue-400 hover:underline">Google Model Viewer</a> - Sample models</li>
+          <li>• <a href="https://poly.pizza" target="_blank" class="text-blue-400 hover:underline">Poly Pizza</a> - Low-poly models</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let lessons = [
+      {
+        id: Date.now(),
+        title: '',
+        modelUrl: '',
+        explanation: '',
+        quizQuestion: '',
+        quizOptions: ['', '', '', ''],
+        quizAnswerIndex: 0
+      }
+    ];
+
+    function renderLessons() {
+      const container = document.getElementById('lessonsContainer');
+      container.innerHTML = lessons.map((lesson, idx) => `
+        <div class="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold text-white">Lesson ${idx + 1}</h2>
+            ${lessons.length > 1 ? `
+              <button onclick="removeLesson(${lesson.id})" class="text-red-400 hover:text-red-300 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+              </button>
+            ` : ''}
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-2">Lesson Title *</label>
+              <input
+                type="text"
+                value="${lesson.title}"
+                onchange="updateLesson(${lesson.id}, 'title', this.value)"
+                placeholder="e.g., Atoms"
+                class="w-full px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-2">3D Model URL</label>
+              <input
+                type="text"
+                value="${lesson.modelUrl}"
+                onchange="updateLesson(${lesson.id}, 'modelUrl', this.value)"
+                placeholder="https://example.com/model.glb"
+                class="w-full px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p class="text-xs text-slate-500 mt-1">Enter a publicly accessible .glb or .gltf file URL</p>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-2">Explanation</label>
+              <textarea
+                onchange="updateLesson(${lesson.id}, 'explanation', this.value)"
+                placeholder="Brief explanation for the voice assistant..."
+                rows="3"
+                class="w-full px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              >${lesson.explanation}</textarea>
+            </div>
+
+            <div class="pt-4 border-t border-slate-700">
+              <h3 class="text-lg font-semibold text-white mb-3">Quiz</h3>
+              
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-300 mb-2">Question</label>
+                <input
+                  type="text"
+                  value="${lesson.quizQuestion}"
+                  onchange="updateLesson(${lesson.id}, 'quizQuestion', this.value)"
+                  placeholder="What are atoms?"
+                  class="w-full px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div class="space-y-2">
+                <label class="block text-sm font-medium text-slate-300 mb-2">Answer Options</label>
+                ${lesson.quizOptions.map((option, optIdx) => `
+                  <div class="flex gap-2 items-center">
+                    <input
+                      type="radio"
+                      name="correct-${lesson.id}"
+                      ${lesson.quizAnswerIndex === optIdx ? 'checked' : ''}
+                      onchange="updateLesson(${lesson.id}, 'quizAnswerIndex', ${optIdx})"
+                      class="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                    />
+                    <input
+                      type="text"
+                      value="${option}"
+                      onchange="updateOption(${lesson.id}, ${optIdx}, this.value)"
+                      placeholder="Option ${optIdx + 1}"
+                      class="flex-1 px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    ${lesson.quizOptions.length > 2 ? `
+                      <button onclick="removeOption(${lesson.id}, ${optIdx})" class="text-red-400 hover:text-red-300">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                      </button>
+                    ` : ''}
+                  </div>
+                `).join('')}
+                <button
+                  onclick="addOption(${lesson.id})"
+                  class="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                  </svg>
+                  Add Option
+                </button>
+                <p class="text-xs text-slate-500">Select the radio button for the correct answer</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function addLesson() {
+      lessons.push({
+        id: Date.now(),
+        title: '',
+        modelUrl: '',
+        explanation: '',
+        quizQuestion: '',
+        quizOptions: ['', '', '', ''],
+        quizAnswerIndex: 0
+      });
+      renderLessons();
+    }
+
+    function removeLesson(id) {
+      lessons = lessons.filter(l => l.id !== id);
+      renderLessons();
+    }
+
+    function updateLesson(id, field, value) {
+      lessons = lessons.map(l => 
+        l.id === id ? { ...l, [field]: value } : l
+      );
+    }
+
+    function updateOption(lessonId, optionIndex, value) {
+      lessons = lessons.map(l => {
+        if (l.id === lessonId) {
+          const newOptions = [...l.quizOptions];
+          newOptions[optionIndex] = value;
+          return { ...l, quizOptions: newOptions };
+        }
+        return l;
+      });
+    }
+
+    function addOption(lessonId) {
+      lessons = lessons.map(l => {
+        if (l.id === lessonId) {
+          return { ...l, quizOptions: [...l.quizOptions, ''] };
+        }
+        return l;
+      });
+      renderLessons();
+    }
+
+    function removeOption(lessonId, optionIndex) {
+      lessons = lessons.map(l => {
+        if (l.id === lessonId && l.quizOptions.length > 2) {
+          const newOptions = l.quizOptions.filter((_, i) => i !== optionIndex);
+          return { 
+            ...l, 
+            quizOptions: newOptions,
+            quizAnswerIndex: l.quizAnswerIndex >= newOptions.length ? 0 : l.quizAnswerIndex
+          };
+        }
+        return l;
+      });
+      renderLessons();
+    }
+
+    function generateCSV() {
+      const headers = 'title,modelUrl,explanation,quizQuestion,quizOptions,quizAnswerIndex\n';
+      const rows = lessons.map(lesson => {
+        const title = `"${lesson.title.replace(/"/g, '""')}"`;
+        const modelUrl = `"${lesson.modelUrl.replace(/"/g, '""')}"`;
+        const explanation = `"${lesson.explanation.replace(/"/g, '""')}"`;
+        const quizQuestion = `"${lesson.quizQuestion.replace(/"/g, '""')}"`;
+        const quizOptions = `"${lesson.quizOptions.join('|').replace(/"/g, '""')}"`;
+        const quizAnswerIndex = lesson.quizAnswerIndex;
+        
+        return `${title},${modelUrl},${explanation},${quizQuestion},${quizOptions},${quizAnswerIndex}`;
+      }).join('\n');
+
+      return headers + rows;
+    }
+
+    function downloadCSV() {
+      const csv = generateCSV();
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'holoclass-lessons.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function previewCSV() {
+      const csv = generateCSV();
+      const lines = csv.split('\n');
+      const preview = lines.slice(0, 10).join('\n');
+      alert('CSV Preview (first 10 lines):\n\n' + preview + (lines.length > 10 ? '\n\n... and ' + (lines.length - 10) + ' more lines' : ''));
+    }
+
+    function loadSampleData() {
+      lessons = [
+        {
+          id: Date.now(),
+          title: 'Atoms',
+          modelUrl: 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
+          explanation: 'Atoms are the fundamental building blocks of all matter in the universe.',
+          quizQuestion: 'What are atoms?',
+          quizOptions: ['Molecules', 'Building blocks of matter', 'Cells', 'Tissues'],
+          quizAnswerIndex: 1
+        },
+        {
+          id: Date.now() + 1,
+          title: 'DNA',
+          modelUrl: 'https://modelviewer.dev/shared-assets/models/NeilArmstrong.glb',
+          explanation: 'DNA contains the genetic instructions for all living organisms.',
+          quizQuestion: 'What does DNA store?',
+          quizOptions: ['Water', 'Genetic information', 'Energy', 'Light'],
+          quizAnswerIndex: 1
+        },
+        {
+          id: Date.now() + 2,
+          title: 'Solar System',
+          modelUrl: 'https://modelviewer.dev/shared-assets/models/glTF-Sample-Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf',
+          explanation: 'The solar system consists of the Sun and all objects that orbit it, including planets, moons, asteroids, and comets.',
+          quizQuestion: 'How many planets are in our solar system?',
+          quizOptions: ['6', '7', '8', '9'],
+          quizAnswerIndex: 2
+        }
+      ];
+      renderLessons();
+    }
+
+    // Initial render
+    renderLessons();
+  </script>
+</body>
+</html>
