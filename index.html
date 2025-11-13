@@ -3,10 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>HoloClass – AR Mockup</title>
+<title>HoloClass – AR Mockup (v3)</title>
 
-<!-- Load model-viewer -->
+<!-- model-viewer -->
 <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+<!-- PapaParse for CSV -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
 <style>
   :root {
@@ -48,23 +50,18 @@
     cursor:grab;
   }
   .overlayModel.active { display:flex }
-  .controls { display:flex;gap:8px;margin-top:10px }
-  .markerRow { display:flex;gap:10px;margin-top:12px }
+  .controls { display:flex;gap:8px;margin-top:10px;flex-wrap:wrap }
+  .markerRow { display:flex;gap:10px;margin-top:12px;flex-wrap:wrap }
   .marker {
     width:84px;height:84px;border-radius:8px;background:#ffffff10;
     display:flex;align-items:center;justify-content:center;
     cursor:pointer;border:2px dashed rgba(255,255,255,0.03);
-    transition:all 0.2s
+    transition:all 0.2s;text-align:center;padding:4px;font-size:11px;
+    word-wrap:break-word
   }
   .marker:hover {
     background:#ffffff15;border-color:var(--accent);
     transform:translateY(-2px)
-  }
-  .marker.custom {
-    border:2px solid rgba(139,92,246,0.3);
-    background:rgba(139,92,246,0.1);
-    flex-direction:column;gap:4px;font-size:10px;
-    color:var(--muted);font-weight:600
   }
   .muted { color:var(--muted);font-size:13px }
   .btn {
@@ -224,14 +221,14 @@
   .btnSecondary {
     background:rgba(255,255,255,0.06);color:#e6eef6;
     padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);
-    cursor:pointer;font-weight:600;font-size:12px;flex:1;
+    cursor:pointer;font-weight:600;font-size:12px;
     transition:all 0.2s
   }
   .btnSecondary:hover { background:rgba(255,255,255,0.1) }
   .btnPrimary {
     background:var(--accent);color:#031024;
     padding:8px 14px;border-radius:8px;border:none;
-    cursor:pointer;font-weight:700;font-size:12px;flex:1;
+    cursor:pointer;font-weight:700;font-size:12px;
     transition:all 0.2s
   }
   .btnPrimary:hover { background:#7bb9fb }
@@ -239,6 +236,37 @@
     font-size:11px;color:var(--muted);text-align:center;
     margin-top:8px;font-style:italic
   }
+
+  .homeOverlay {
+    position:fixed;inset:0;background:linear-gradient(180deg,rgba(2,6,10,0.85),rgba(2,6,10,0.95));
+    z-index:400;display:flex;align-items:center;justify-content:center;padding:24px;
+  }
+  .homeCard {
+    background:rgba(11,18,32,0.95);padding:24px;border-radius:12px;border:1px solid rgba(255,255,255,0.06);
+    width:100%;max-width:760px;max-height:90vh;overflow-y:auto
+  }
+  .homeRow { display:flex;gap:12px;align-items:center;justify-content:space-between;margin-top:10px;flex-wrap:wrap }
+  .lessonList { display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:12px }
+  .lessonItem {
+    background:rgba(255,255,255,0.02);padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);cursor:pointer;
+    display:flex;flex-direction:column;gap:6px;transition:all 0.2s
+  }
+  .lessonItem:hover {
+    background:rgba(255,255,255,0.05);border-color:var(--accent)
+  }
+  .lessonTitle { font-weight:700;font-size:14px }
+  .badge { font-size:12px;padding:6px 8px;border-radius:999px;background:#101827;color:var(--muted);display:inline-block }
+  .progressBar { height:8px;background:rgba(255,255,255,0.05);border-radius:8px;overflow:hidden;margin-top:8px }
+  .progressFill { height:100%;background:linear-gradient(90deg,var(--accent),#8b5cf6);width:0%;transition:width 0.3s }
+  .toolbar { display:flex;gap:8px;align-items:center }
+  .smallGhost { background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);padding:6px 8px;border-radius:8px;cursor:pointer;font-size:12px }
+  .smallGhost:hover { background:rgba(255,255,255,0.05);color:#e6eef6 }
+  .teacherPanel { margin-top:12px;background:rgba(255,255,255,0.02);padding:12px;border-radius:10px }
+  input[type="text"], textarea { width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.2);color:#fff;font-size:13px }
+  input[type="text"]:focus, textarea:focus { outline:none;border-color:var(--accent) }
+  label { font-size:12px;color:var(--muted);display:block;margin-top:8px;margin-bottom:4px }
+  .csvImportSection { margin-top:12px;padding:12px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:8px }
+  .csvHelp { font-size:11px;color:var(--muted);margin-top:6px;line-height:1.4 }
   @media (max-width:980px){
     .container{grid-template-columns:1fr}
     .stage{height:420px}
@@ -252,8 +280,13 @@
     <header>
       <div class="logo">HC</div>
       <div>
-        <h1>HoloClass – AR Learning Mockup (GLB)</h1>
-        <p class="lead">Simulates marker-based AR using your own .glb 3D models.</p>
+        <h1>HoloClass – AR Learning Platform (v3)</h1>
+        <p class="lead">Interactive AR lessons with CSV import + working model URLs</p>
+      </div>
+      <div style="margin-left:auto" class="toolbar">
+        <button id="btnHome" class="smallGhost">Home</button>
+        <button id="btnProgress" class="smallGhost">Progress</button>
+        <button id="btnTeacher" class="smallGhost">Teacher Mode</button>
       </div>
     </header>
 
@@ -262,7 +295,6 @@
       <div class="stage" id="stage">
         <video id="cam" autoplay playsinline></video>
 
-        <!-- Photo Button -->
         <button class="photoBtn" id="photoBtn" title="Take Photo">
           <svg viewBox="0 0 24 24" fill="none">
             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
@@ -270,14 +302,12 @@
           </svg>
         </button>
 
-        <!-- Photo Flash Effect -->
         <div class="photoFlash" id="photoFlash"></div>
 
-        <!-- Overlay 3D viewer -->
         <div id="overlay" class="overlayModel">
           <model-viewer
             id="myModel"
-            src="models/atom.glb"
+            src="https://modelviewer.dev/shared-assets/models/Astronaut.glb"
             alt="3D model"
             camera-controls
             auto-rotate
@@ -286,7 +316,6 @@
           ></model-viewer>
         </div>
 
-        <!-- Position Control Panel -->
         <div id="positionPanel" class="positionPanel">
           <div class="panelHeader" id="panelHeader">
             <span class="panelTitle">Position & Rotation</span>
@@ -325,383 +354,762 @@
           </div>
         </div>
 
-        <!-- Quiz Overlay -->
         <div id="quizOverlay" class="quizOverlay">
-          <div class="quizQuestion" id="quizQuestion">What are atoms made of?</div>
-          <div class="quizOptions" id="quizOptions">
-            <div class="quizOption" data-correct="false">Only electrons</div>
-            <div class="quizOption" data-correct="true">Protons, neutrons, and electrons</div>
-            <div class="quizOption" data-correct="false">Only protons</div>
-            <div class="quizOption" data-correct="false">Only neutrons</div>
-          </div>
+          <div class="quizQuestion" id="quizQuestion"></div>
+          <div class="quizOptions" id="quizOptions"></div>
           <div class="quizFeedback" id="quizFeedback"></div>
           <button class="quizClose" id="quizClose">Continue Learning</button>
         </div>
       </div>
 
-      <div class="markerRow">
-        <div class="marker" data-marker="atom" title="Atom marker">
-          <svg width="60" height="60" viewBox="0 0 100 100">
-            <rect x="6" y="6" width="88" height="88" rx="8"
-              stroke="#fff" stroke-opacity="0.12"/>
-            <path d="M50 25c15 0 27 12 27 27s-12 27-27 27-27-12-27-27S35 25 50 25z"
-              stroke="#9be7ff" stroke-width="3" stroke-opacity="0.9"/>
-          </svg>
-        </div>
-        <div class="marker" data-marker="cell" title="Cell marker">
-          <svg width="60" height="60" viewBox="0 0 100 100">
-            <rect x="6" y="6" width="88" height="88" rx="8"
-              stroke="#fff" stroke-opacity="0.12"/>
-            <circle cx="50" cy="50" r="22"
-              stroke="#7cf28b" stroke-width="3" stroke-opacity="0.9"/>
-          </svg>
-        </div>
-        <div class="marker" data-marker="circuit" title="Circuit marker">
-          <svg width="60" height="60" viewBox="0 0 100 100">
-            <rect x="6" y="6" width="88" height="88" rx="8"
-              stroke="#fff" stroke-opacity="0.12"/>
-            <path d="M30 70L70 30M70 70L30 30"
-              stroke="#ffd375" stroke-width="3" stroke-opacity="0.9"/>
-          </svg>
-        </div>
-        <div class="marker custom" id="customMarker" title="Custom model" style="display:none">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-          </svg>
-          <span>CUSTOM</span>
-        </div>
-      </div>
+      <div class="markerRow" id="markerRow"></div>
 
       <div class="controls" style="margin-top:12px">
         <button class="btn small" id="adjustPos">Adjust Position</button>
         <button class="btn small" id="hide">Hide hologram</button>
         <button class="btn small" id="showQuiz">Pop Quiz</button>
-        <div style="flex:1" class="muted" id="status">Status: Idle – click a marker to simulate AR</div>
+        <div style="flex:1" class="muted" id="status">Status: Idle – click a lesson to simulate AR</div>
       </div>
     </section>
 
     <aside class="card rightCol">
       <strong>Quick Instructions</strong>
-      <div class="step">• To get started, allow camera access</div>
-      <div class="step">• Once you think you're ready to test you're knowledge, try out the questions</div>
-      <div class="step">• At any moment, you can take a photo by clicking the camera icon </div>
-      <div class="step">• Feel free to upload your own model</div>
+      <div class="step">• Allow camera access to see AR preview</div>
+      <div class="step">• Use Home to pick a lesson. Teacher Mode lets you add lessons & import CSV.</div>
+      <div class="step">• Take photos, adjust the model, and use voice assistant to read explanations.</div>
       
       <div class="uploadSection">
-        <strong>Upload Custom Model</strong>
-        <input type="file" id="fileInput" class="fileInput" accept=".glb,.gltf">
-        <label for="fileInput" class="uploadBtn">Choose .glb file</label>
+        <strong>Upload Custom Model (Teacher)</strong>
+        <input type="file" id="teacherFile" class="fileInput" accept=".glb,.gltf">
+        <label for="teacherFile" class="uploadBtn">Choose .glb file</label>
         <div class="fileName" id="fileName">No file selected</div>
+      </div>
+
+      <div id="voiceControls" class="uploadSection" style="margin-top:8px">
+        <strong>Voice Assistant</strong>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="voiceSpeak" class="uploadBtn" style="width:48%;">Speak</button>
+          <button id="voiceStop" class="uploadBtn" style="width:48%;">Stop</button>
+        </div>
       </div>
     </aside>
 
-    <div class="footer">HoloClass Mockup – GLB Integration by Harshit</div>
+    <div class="footer">HoloClass Mockup v3 – Enhanced by Harshit</div>
+  </div>
+
+  <div id="homeOverlay" class="homeOverlay">
+    <div class="homeCard card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+        <div>
+          <h2 style="margin:0">Welcome to HoloClass 3.0</h2>
+          <div class="muted" style="margin-top:6px">Choose a lesson to start. Import CSV or add lessons manually.</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btnSecondary" id="openGenerator">🎨 Lesson Generator</button>
+          <button class="btnSecondary" id="importSample">Import Samples</button>
+          <button class="btnPrimary" id="closeHome">Start</button>
+        </div>
+      </div>
+
+      <div class="homeRow">
+        <div style="flex:1;min-width:200px">
+          <label class="muted">Search lessons</label>
+          <input id="searchInput" type="text" placeholder="Search by name" />
+        </div>
+        <div style="min-width:210px">
+          <label class="muted">View</label>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <button id="viewAll" class="smallGhost">All</button>
+            <button id="viewIncomplete" class="smallGhost">Incomplete</button>
+            <button id="viewComplete" class="smallGhost">Complete</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="lessonList" class="lessonList" style="margin-top:12px"></div>
+
+      <div class="teacherPanel" id="teacherPanel" style="display:none">
+        <strong>Teacher Mode — Add Lessons</strong>
+        
+        <div class="csvImportSection">
+          <strong style="font-size:13px">📊 Import Lessons from CSV</strong>
+          <input type="file" id="csvFile" class="fileInput" accept=".csv">
+          <label for="csvFile" class="uploadBtn" style="margin-top:8px">Choose CSV File</label>
+          <div class="csvHelp">
+            <strong>CSV Format:</strong> title, modelUrl, explanation, quizQuestion, quizOptions (pipe-separated), quizAnswerIndex<br>
+            <em>Example: "Atoms", "https://...", "Explanation text", "What is an atom?", "Option1|Option2|Option3", "1"</em>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.06)">
+          <strong style="font-size:13px">✏️ Add Single Lesson</strong>
+        </div>
+
+        <label>Lesson Title</label>
+        <input id="lessonTitle" type="text" placeholder="e.g., Solar System" />
+        
+        <label>Model URL</label>
+        <input id="lessonModelUrl" type="text" placeholder="https://example.com/model.glb" />
+        
+        <label>Explanation (optional)</label>
+        <textarea id="lessonExplanation" rows="3" placeholder="Short explanation for Voice Assistant"></textarea>
+        
+        <label>Quiz Question</label>
+        <input id="quizQuestionInput" type="text" placeholder="What orbits the sun?" />
+        
+        <label>Options (comma-separated)</label>
+        <input id="quizOptionsInput" type="text" placeholder="Stars,Planets,Moons,Asteroids" />
+        
+        <label>Correct Option Index (0-based)</label>
+        <input id="quizAnswerInput" type="text" placeholder="1" />
+        
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <button id="addLesson" class="btnPrimary" style="flex:1">Add Lesson</button>
+          <button id="clearLessons" class="btnSecondary" style="flex:1">Clear All</button>
+          <button id="toggleTeacherView" class="btnSecondary" style="flex:1">Close</button>
+        </div>
+      </div>
+    </div>
   </div>
 
 <script>
-  const video = document.getElementById('cam');
-  const overlay = document.getElementById('overlay');
-  const status = document.getElementById('status');
-  const markers = document.querySelectorAll('.marker');
-  const hideBtn = document.getElementById('hide');
-  const adjustPosBtn = document.getElementById('adjustPos');
-  const positionPanel = document.getElementById('positionPanel');
-  const lockPosBtn = document.getElementById('lockPos');
-  const resetPosBtn = document.getElementById('resetPos');
-  const viewer = document.getElementById('myModel');
-  const fileInput = document.getElementById('fileInput');
-  const fileName = document.getElementById('fileName');
-  const showQuizBtn = document.getElementById('showQuiz');
-  const quizOverlay = document.getElementById('quizOverlay');
-  const quizClose = document.getElementById('quizClose');
-  const quizOptions = document.querySelectorAll('.quizOption');
-  const quizFeedback = document.getElementById('quizFeedback');
-  const customMarker = document.getElementById('customMarker');
-  const photoBtn = document.getElementById('photoBtn');
-  const photoFlash = document.getElementById('photoFlash');
+const video = document.getElementById('cam');
+const overlay = document.getElementById('overlay');
+const status = document.getElementById('status');
+const viewer = document.getElementById('myModel');
+const positionPanel = document.getElementById('positionPanel');
+const quizOverlay = document.getElementById('quizOverlay');
+const photoFlash = document.getElementById('photoFlash');
+const homeOverlay = document.getElementById('homeOverlay');
+const lessonList = document.getElementById('lessonList');
+const teacherPanel = document.getElementById('teacherPanel');
+
+let lessons = JSON.parse(localStorage.getItem('hc_lessons') || '[]');
+let progress = JSON.parse(localStorage.getItem('hc_progress') || '{}');
+let currentLesson = null;
+let sessionUploadedModel = null;
+
+function saveLessons() {
+  try {
+    localStorage.setItem('hc_lessons', JSON.stringify(lessons));
+  } catch (e) {
+    console.warn('Storage limit reached:', e);
+    alert('Storage limit reached. Try using model URLs instead of file uploads.');
+  }
+}
+
+function saveProgress() {
+  localStorage.setItem('hc_progress', JSON.stringify(progress));
+}
+
+function uid(prefix='l') {
+  return prefix + '-' + Math.random().toString(36).slice(2,9) + '-' + Date.now();
+}
+
+async function startCam() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    video.srcObject = stream;
+    status.textContent = 'Status: Camera active';
+  } catch (e) {
+    status.textContent = 'Status: Camera unavailable - simulation mode';
+  }
+}
+startCam();
+
+function renderLessons(filter='all', query='') {
+  lessonList.innerHTML = '';
+  const q = query.trim().toLowerCase();
+  const filtered = lessons.filter(lesson => {
+    if (q && !lesson.title.toLowerCase().includes(q)) return false;
+    if (filter === 'incomplete') return !(progress[lesson.id] && progress[lesson.id].completed);
+    if (filter === 'complete') return (progress[lesson.id] && progress[lesson.id].completed);
+    return true;
+  });
+  
+  if (filtered.length === 0) {
+    lessonList.innerHTML = `<div style="color:var(--muted);grid-column:1/-1;padding:12px">No lessons found. Import CSV or add manually in Teacher Mode.</div>`;
+    return;
+  }
+  
+  filtered.forEach(lesson => {
+    const item = document.createElement('div');
+    item.className = 'lessonItem';
+    const stars = (progress[lesson.id] && progress[lesson.id].stars) ? '★'.repeat(progress[lesson.id].stars) : '✩';
+    const completed = progress[lesson.id] && progress[lesson.id].completed ? 100 : 0;
+    item.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="flex:1">
+          <div class="lessonTitle">${lesson.title}</div>
+          <div class="muted" style="font-size:11px;margin-top:2px">${(lesson.explanation || '').slice(0,50)}${lesson.explanation && lesson.explanation.length > 50 ? '...' : ''}</div>
+        </div>
+        <div class="badge">${stars}</div>
+      </div>
+      <div class="progressBar"><div class="progressFill" style="width:${completed}%"></div></div>
+    `;
+    item.addEventListener('click', () => {
+      openLesson(lesson.id);
+      homeOverlay.style.display = 'none';
+    });
+    lessonList.appendChild(item);
+  });
+}
+
+function renderMarkerRow() {
+  const row = document.getElementById('markerRow');
+  row.innerHTML = '';
+  lessons.slice(0, 8).forEach(lesson => {
+    const m = document.createElement('div');
+    m.className = 'marker';
+    m.title = lesson.title;
+    m.textContent = lesson.title;
+    m.addEventListener('click', () => {
+      openLesson(lesson.id);
+      homeOverlay.style.display = 'none';
+    });
+    row.appendChild(m);
+  });
+}
+
+function openLesson(id) {
+  const lesson = lessons.find(l => l.id === id);
+  if (!lesson) return;
+  
+  currentLesson = lesson;
+  
+  if (lesson.modelUrl) {
+    viewer.src = lesson.modelUrl;
+    status.textContent = `Status: Loading ${lesson.title}...`;
+    
+    viewer.addEventListener('load', () => {
+      status.textContent = `Status: ${lesson.title} loaded - Adjust Position to move`;
+    }, { once: true });
+    
+    viewer.addEventListener('error', (e) => {
+      console.error('Model load error:', e);
+      status.textContent = `Status: Error loading model - check URL`;
+      viewer.src = 'https://modelviewer.dev/shared-assets/models/Astronaut.glb';
+    }, { once: true });
+  } else if (lesson.modelBase64) {
+    const blob = base64ToBlob(lesson.modelBase64, 'model/gltf-binary');
+    const url = URL.createObjectURL(blob);
+    viewer.src = url;
+    status.textContent = `Status: ${lesson.title} loaded`;
+  } else {
+    viewer.src = 'https://modelviewer.dev/shared-assets/models/Astronaut.glb';
+    status.textContent = `Status: ${lesson.title} loaded (default model)`;
+  }
+  
+  overlay.classList.add('active');
+  applyTransform();
+  
+  if (lesson.quiz) prepareQuiz(lesson.quiz);
+}
+
+function base64ToBlob(base64, mime='application/octet-stream') {
+  const byteCharacters = atob(base64);
+  const byteNumbers = new Array(byteCharacters.length);
+  for (let i=0; i<byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
+  const byteArray = new Uint8Array(byteNumbers);
+  return new Blob([byteArray], {type: mime});
+}
+
+document.getElementById('hide').addEventListener('click', () => {
+  overlay.classList.remove('active');
+  positionPanel.classList.remove('active');
+  status.textContent = 'Status: Hidden';
+});
+
+document.getElementById('adjustPos').addEventListener('click', () => {
+  if (!overlay.classList.contains('active')) {
+    status.textContent = 'Status: Show a hologram first';
+    return;
+  }
+  positionPanel.classList.add('active');
+  status.textContent = 'Status: Drag model or use sliders';
+});
+
+document.getElementById('lockPos').addEventListener('click', () => {
+  positionPanel.classList.remove('active');
+  status.textContent = 'Status: Position locked';
+});
+
+document.getElementById('resetPos').addEventListener('click', () => {
+  currentX = 0; currentY = 0; rotX = 0; rotY = 0; rotZ = 0;
+  tiltX.value = 0; tiltY.value = 0; tiltZ.value = 0;
+  tiltXVal.textContent = '0°'; tiltYVal.textContent = '0°'; tiltZVal.textContent = '0°';
+  applyTransform();
+  status.textContent = 'Status: Position reset';
+});
+
+const tiltX = document.getElementById('tiltX');
+const tiltY = document.getElementById('tiltY');
+const tiltZ = document.getElementById('tiltZ');
+const tiltXVal = document.getElementById('tiltXVal');
+const tiltYVal = document.getElementById('tiltYVal');
+const tiltZVal = document.getElementById('tiltZVal');
+let rotX = 0, rotY = 0, rotZ = 0;
+
+tiltX.addEventListener('input', (e) => { 
+  rotX = e.target.value; 
+  tiltXVal.textContent = rotX + '°'; 
+  applyTransform(); 
+});
+tiltY.addEventListener('input', (e) => { 
+  rotY = e.target.value; 
+  tiltYVal.textContent = rotY + '°'; 
+  applyTransform(); 
+});
+tiltZ.addEventListener('input', (e) => { 
+  rotZ = e.target.value; 
+  tiltZVal.textContent = rotZ + '°'; 
+  applyTransform(); 
+});
+
+let isDragging = false;
+let dragStartX, dragStartY;
+let currentX = 0, currentY = 0;
+
+overlay.addEventListener('mousedown', startDrag);
+overlay.addEventListener('touchstart', startDrag, { passive: false });
+document.addEventListener('mousemove', drag);
+document.addEventListener('touchmove', drag, { passive: false });
+document.addEventListener('mouseup', stopDrag);
+document.addEventListener('touchend', stopDrag);
+
+function startDrag(e) {
+  if (!positionPanel.classList.contains('active')) return;
+  isDragging = true;
+  const touch = e.touches ? e.touches[0] : e;
+  dragStartX = touch.clientX - currentX;
+  dragStartY = touch.clientY - currentY;
+  overlay.style.cursor = 'grabbing';
+}
+
+function drag(e) {
+  if (!isDragging) return;
+  e.preventDefault();
+  const touch = e.touches ? e.touches[0] : e;
+  currentX = touch.clientX - dragStartX;
+  currentY = touch.clientY - dragStartY;
+  applyTransform();
+}
+
+function stopDrag() {
+  isDragging = false;
+  overlay.style.cursor = 'grab';
+}
+
+function applyTransform() {
+  overlay.style.transform = `translate(calc(-50% + ${currentX}px), calc(-50% + ${currentY}px)) rotateX(${rotX}deg) rotateY(${rotY}deg) rotateZ(${rotZ}deg)`;
+}
+
+let isPanelDragging = false;
+let panelStartX, panelStartY;
+let panelX = 0, panelY = 0;
+const panelHeader = document.getElementById('panelHeader');
+
+panelHeader.addEventListener('mousedown', startPanelDrag);
+panelHeader.addEventListener('touchstart', startPanelDrag, { passive: false });
+document.addEventListener('mousemove', dragPanel);
+document.addEventListener('touchmove', dragPanel, { passive: false });
+document.addEventListener('mouseup', stopPanelDrag);
+document.addEventListener('touchend', stopPanelDrag);
+
+function startPanelDrag(e) { 
+  e.stopPropagation(); 
+  isPanelDragging = true; 
+  const touch = e.touches ? e.touches[0] : e; 
+  panelStartX = touch.clientX - panelX; 
+  panelStartY = touch.clientY - panelY; 
+  positionPanel.classList.add('dragging'); 
+}
+
+function dragPanel(e) { 
+  if (!isPanelDragging) return; 
+  e.preventDefault(); 
+  e.stopPropagation(); 
+  const touch = e.touches ? e.touches[0] : e; 
+  panelX = touch.clientX - panelStartX; 
+  panelY = touch.clientY - panelStartY; 
+  positionPanel.style.transform = `translate(calc(-50% + ${panelX}px), ${panelY}px)`; 
+}
+
+function stopPanelDrag() { 
+  isPanelDragging = false; 
+  positionPanel.classList.remove('dragging'); 
+}
+
+function prepareQuiz(quiz) {
+  document.getElementById('quizQuestion').textContent = quiz.question;
+  const optionsEl = document.getElementById('quizOptions');
+  optionsEl.innerHTML = '';
+  
+  quiz.options.forEach((opt, idx) => {
+    const el = document.createElement('div');
+    el.className = 'quizOption';
+    el.textContent = opt;
+    el.dataset.correct = (idx === quiz.answerIndex) ? 'true' : 'false';
+    el.addEventListener('click', handleQuizClick);
+    optionsEl.appendChild(el);
+  });
+  
+  document.getElementById('quizFeedback').className = 'quizFeedback';
+}
+
+function handleQuizClick(e) {
+  const el = e.currentTarget;
+  if (!currentLesson || !currentLesson.quiz) return;
+  
+  const optionsEl = document.getElementById('quizOptions');
+  [...optionsEl.children].forEach(opt => opt.style.pointerEvents = 'none');
+  [...optionsEl.children].forEach(opt => { 
+    if (opt.dataset.correct === 'true') opt.classList.add('correct'); 
+  });
+  
+  const isCorrect = el.dataset.correct === 'true';
+  const feedback = document.getElementById('quizFeedback');
+  
+  if (isCorrect) {
+    el.classList.add('correct');
+    feedback.textContent = '✓ Correct! ' + (currentLesson.explanation || 'Great job!');
+    feedback.className = 'quizFeedback show correct';
+    awardProgress(currentLesson.id, true);
+  } else {
+    el.classList.add('incorrect');
+    feedback.textContent = '✗ Not quite. ' + (currentLesson.explanation || 'Try again!');
+    feedback.className = 'quizFeedback show incorrect';
+    awardProgress(currentLesson.id, false);
+  }
+}
+
+document.getElementById('showQuiz').addEventListener('click', () => {
+  if (!overlay.classList.contains('active')) {
+    status.textContent = 'Status: Show a hologram first';
+    return;
+  }
+  if (!currentLesson || !currentLesson.quiz) {
+    status.textContent = 'Status: No quiz available for this lesson';
+    return;
+  }
+  quizOverlay.classList.add('active');
+});
+
+document.getElementById('quizClose').addEventListener('click', () => {
+  quizOverlay.classList.remove('active');
+  const optionsEl = document.getElementById('quizOptions');
+  [...optionsEl.children].forEach(opt => {
+    opt.style.pointerEvents = 'auto';
+    opt.classList.remove('correct', 'incorrect');
+  });
+  document.getElementById('quizFeedback').className = 'quizFeedback';
+});
+
+function awardProgress(lessonId, correct) {
+  if (!progress[lessonId]) progress[lessonId] = { completed: false, score: 0, stars: 0 };
+  
+  if (correct) {
+    progress[lessonId].completed = true;
+    progress[lessonId].score = 100;
+    progress[lessonId].stars = 1;
+    status.textContent = `Status: Lesson complete — ★ badge earned!`;
+  }
+  
+  saveProgress();
+  renderLessons();
+  renderMarkerRow();
+}
+
+document.getElementById('photoBtn').addEventListener('click', () => {
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
   const stage = document.getElementById('stage');
+  canvas.width = stage.offsetWidth;
+  canvas.height = stage.offsetHeight;
+  context.drawImage(video, 0, 0, canvas.width, canvas.height);
+  
+  photoFlash.classList.add('active');
+  setTimeout(() => photoFlash.classList.remove('active'), 300);
+  
+  canvas.toBlob((blob) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `holoclass-${Date.now()}.png`;
+    link.click();
+    URL.revokeObjectURL(url);
+    status.textContent = 'Status: Photo saved!';
+    setTimeout(() => status.textContent = 'Status: Camera active', 2000);
+  });
+});
 
-  // Tilt controls
-  const tiltX = document.getElementById('tiltX');
-  const tiltY = document.getElementById('tiltY');
-  const tiltZ = document.getElementById('tiltZ');
-  const tiltXVal = document.getElementById('tiltXVal');
-  const tiltYVal = document.getElementById('tiltYVal');
-  const tiltZVal = document.getElementById('tiltZVal');
+let synth = window.speechSynthesis;
 
-  let isDragging = false;
-  let dragStartX, dragStartY;
-  let currentX = 0, currentY = 0;
-  let rotX = 0, rotY = 0, rotZ = 0;
-  let customModelUrl = null;
+document.getElementById('voiceSpeak').addEventListener('click', () => {
+  if (!currentLesson) { 
+    alert('Open a lesson first to use voice assistant'); 
+    return; 
+  }
+  const text = currentLesson.explanation || currentLesson.title;
+  if (synth) {
+    synth.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.rate = 0.95;
+    synth.speak(utter);
+    status.textContent = 'Status: Speaking...';
+  } else {
+    alert('Voice synthesis not supported in this browser');
+  }
+});
 
-  // Panel dragging
-  let isPanelDragging = false;
-  let panelStartX, panelStartY;
-  let panelX = 0, panelY = 0;
-  const panelHeader = document.getElementById('panelHeader');
+document.getElementById('voiceStop').addEventListener('click', () => { 
+  if (synth) {
+    synth.cancel();
+    status.textContent = 'Status: Voice stopped';
+  }
+});
 
-  // Start camera
-  async function startCam() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      video.srcObject = stream;
-      status.textContent = 'Status: Camera active – click a marker to show hologram';
-    } catch (e) {
-      status.textContent = 'Status: Camera unavailable – click a marker to simulate.';
+document.getElementById('teacherFile').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  document.getElementById('fileName').textContent = `Selected: ${file.name}`;
+  
+  if (sessionUploadedModel && sessionUploadedModel.url) {
+    URL.revokeObjectURL(sessionUploadedModel.url);
+  }
+  
+  const objUrl = URL.createObjectURL(file);
+  sessionUploadedModel = { url: objUrl, filename: file.name };
+  
+  const reader = new FileReader();
+  reader.onload = () => {
+    const base64 = reader.result.split(',')[1];
+    if (base64.length < 2.5 * 1024 * 1024) {
+      sessionUploadedModel.base64 = base64;
+      status.textContent = `Uploaded ${file.name} (cached)`;
+    } else {
+      status.textContent = `Uploaded ${file.name} (session only)`;
     }
-  }
-  startCam();
+  };
+  reader.readAsDataURL(file);
+});
 
-  // Marker click
-  markers.forEach(m => m.addEventListener('click', () => {
-    const type = m.dataset.marker;
-    showHologram(type);
-  }));
-
-  // Custom marker click
-  customMarker.addEventListener('click', () => {
-    if (customModelUrl) {
-      showHologram('custom');
-    }
-  });
-
-function showHologram(type) {
-    overlay.classList.add('active');
-    if (type === 'atom') viewer.src = 'models/atom.glb';
-    else if (type === 'cell') viewer.src = 'cell.glb';
-    else if (type === 'circuit') viewer.src = 'electric_circuit.glb';
-    status.textContent = 'Status: Hologram (' + type + ') visible – click Adjust Position';
-    applyTransform();
-  }
-
-  hideBtn.addEventListener('click', () => {
-    overlay.classList.remove('active');
-    positionPanel.classList.remove('active');
-    status.textContent = 'Status: Hidden';
-  });
-
-  // Adjust Position button
-  adjustPosBtn.addEventListener('click', () => {
-    if (!overlay.classList.contains('active')) {
-      status.textContent = 'Status: Show a hologram first';
-      return;
-    }
-    positionPanel.classList.add('active');
-    status.textContent = 'Status: Adjusting position – drag model or use sliders';
-  });
-
-  // Lock Position button
-  lockPosBtn.addEventListener('click', () => {
-    positionPanel.classList.remove('active');
-    status.textContent = 'Status: Position locked';
-  });
-
-  // Reset Position button
-  resetPosBtn.addEventListener('click', () => {
-    currentX = 0;
-    currentY = 0;
-    rotX = 0;
-    rotY = 0;
-    rotZ = 0;
-    tiltX.value = 0;
-    tiltY.value = 0;
-    tiltZ.value = 0;
-    tiltXVal.textContent = '0°';
-    tiltYVal.textContent = '0°';
-    tiltZVal.textContent = '0°';
-    applyTransform();
-    status.textContent = 'Status: Position reset';
-  });
-
-  // Tilt sliders
-  tiltX.addEventListener('input', (e) => {
-    rotX = e.target.value;
-    tiltXVal.textContent = rotX + '°';
-    applyTransform();
-  });
-
-  tiltY.addEventListener('input', (e) => {
-    rotY = e.target.value;
-    tiltYVal.textContent = rotY + '°';
-    applyTransform();
-  });
-
-  tiltZ.addEventListener('input', (e) => {
-    rotZ = e.target.value;
-    tiltZVal.textContent = rotZ + '°';
-    applyTransform();
-  });
-
-  // Drag functionality
-  overlay.addEventListener('mousedown', startDrag);
-  overlay.addEventListener('touchstart', startDrag, { passive: false });
-  document.addEventListener('mousemove', drag);
-  document.addEventListener('touchmove', drag, { passive: false });
-  document.addEventListener('mouseup', stopDrag);
-  document.addEventListener('touchend', stopDrag);
-
-  function startDrag(e) {
-    if (!positionPanel.classList.contains('active')) return;
-    isDragging = true;
-    const touch = e.touches ? e.touches[0] : e;
-    dragStartX = touch.clientX - currentX;
-    dragStartY = touch.clientY - currentY;
-    overlay.style.cursor = 'grabbing';
-  }
-
-  function drag(e) {
-    if (!isDragging) return;
-    e.preventDefault();
-    const touch = e.touches ? e.touches[0] : e;
-    currentX = touch.clientX - dragStartX;
-    currentY = touch.clientY - dragStartY;
-    applyTransform();
-  }
-
-  function stopDrag() {
-    isDragging = false;
-    overlay.style.cursor = 'grab';
-  }
-
-  function applyTransform() {
-    overlay.style.transform = `translate(calc(-50% + ${currentX}px), calc(-50% + ${currentY}px)) rotateX(${rotX}deg) rotateY(${rotY}deg) rotateZ(${rotZ}deg)`;
-  }
-
-  // Panel drag functionality
-  panelHeader.addEventListener('mousedown', startPanelDrag);
-  panelHeader.addEventListener('touchstart', startPanelDrag, { passive: false });
-  document.addEventListener('mousemove', dragPanel);
-  document.addEventListener('touchmove', dragPanel, { passive: false });
-  document.addEventListener('mouseup', stopPanelDrag);
-  document.addEventListener('touchend', stopPanelDrag);
-
-  function startPanelDrag(e) {
-    e.stopPropagation();
-    isPanelDragging = true;
-    const touch = e.touches ? e.touches[0] : e;
-    panelStartX = touch.clientX - panelX;
-    panelStartY = touch.clientY - panelY;
-    positionPanel.classList.add('dragging');
-  }
-
-  function dragPanel(e) {
-    if (!isPanelDragging) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const touch = e.touches ? e.touches[0] : e;
-    panelX = touch.clientX - panelStartX;
-    panelY = touch.clientY - panelStartY;
-    positionPanel.style.transform = `translate(calc(-50% + ${panelX}px), ${panelY}px)`;
-  }
-
-  function stopPanelDrag() {
-    isPanelDragging = false;
-    positionPanel.classList.remove('dragging');
-  }
-
-  // File upload functionality
-  fileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      fileName.textContent = `Selected: ${file.name}`;
-      // Revoke old URL if exists
-      if (customModelUrl) {
-        URL.revokeObjectURL(customModelUrl);
-      }
-      customModelUrl = URL.createObjectURL(file);
-      customMarker.style.display = 'flex';
-      status.textContent = `Status: Custom model ready - click the CUSTOM marker to view`;
+document.getElementById('csvFile').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: function(results) {
+      let imported = 0;
       
-      // Automatically show the custom model
-      viewer.src = customModelUrl;
-      overlay.classList.add('active');
-      status.textContent = `Status: Custom model loaded (${file.name})`;
-      applyTransform();
-    }
-  });
-
-  // Quiz functionality
-  showQuizBtn.addEventListener('click', () => {
-    if (!overlay.classList.contains('active')) {
-      status.textContent = 'Status: Show a hologram first to take the quiz';
-      return;
-    }
-    quizOverlay.classList.add('active');
-    resetQuiz();
-  });
-
-  quizClose.addEventListener('click', () => {
-    quizOverlay.classList.remove('active');
-  });
-
-  quizOptions.forEach(option => {
-    option.addEventListener('click', function() {
-      if (this.classList.contains('correct') || this.classList.contains('incorrect')) return;
-      
-      const isCorrect = this.dataset.correct === 'true';
-      
-      quizOptions.forEach(opt => {
-        opt.style.pointerEvents = 'none';
-        if (opt.dataset.correct === 'true') {
-          opt.classList.add('correct');
+      results.data.forEach(row => {
+        const title = (row.title || '').trim();
+        const modelUrl = (row.modelUrl || '').trim();
+        const explanation = (row.explanation || '').trim();
+        const quizQuestion = (row.quizQuestion || '').trim();
+        const quizOptions = (row.quizOptions || '').trim();
+        const quizAnswerIndex = parseInt(row.quizAnswerIndex, 10);
+        
+        if (!title) return;
+        
+        const lesson = {
+          id: uid('csv'),
+          title: title,
+          modelUrl: modelUrl || null,
+          explanation: explanation,
+          quiz: null
+        };
+        
+        if (quizQuestion && quizOptions) {
+          const options = quizOptions.split('|').map(o => o.trim()).filter(o => o);
+          lesson.quiz = {
+            question: quizQuestion,
+            options: options,
+            answerIndex: isNaN(quizAnswerIndex) ? 0 : quizAnswerIndex
+          };
         }
+        
+        lessons.push(lesson);
+        imported++;
       });
       
-      if (isCorrect) {
-        this.classList.add('correct');
-        quizFeedback.textContent = '✓ Correct! Atoms consist of protons and neutrons in the nucleus, with electrons orbiting around.';
-        quizFeedback.className = 'quizFeedback show correct';
-      } else {
-        this.classList.add('incorrect');
-        quizFeedback.textContent = '✗ Not quite. Atoms are made of protons, neutrons, and electrons working together.';
-        quizFeedback.className = 'quizFeedback show incorrect';
-      }
-    });
+      saveLessons();
+      renderLessons();
+      renderMarkerRow();
+      status.textContent = `Status: Imported ${imported} lessons from CSV!`;
+      alert(`Successfully imported ${imported} lessons!`);
+    },
+    error: function(error) {
+      alert('Error parsing CSV: ' + error.message);
+    }
   });
+});
 
-  function resetQuiz() {
-    quizOptions.forEach(opt => {
-      opt.classList.remove('correct', 'incorrect');
-      opt.style.pointerEvents = 'auto';
-    });
-    quizFeedback.classList.remove('show', 'correct', 'incorrect');
+document.getElementById('addLesson').addEventListener('click', () => {
+  const title = document.getElementById('lessonTitle').value.trim();
+  const modelUrl = document.getElementById('lessonModelUrl').value.trim();
+  const explanation = document.getElementById('lessonExplanation').value.trim();
+  const qText = document.getElementById('quizQuestionInput').value.trim();
+  const qOpts = document.getElementById('quizOptionsInput').value.trim();
+  const qAns = parseInt(document.getElementById('quizAnswerInput').value.trim(), 10);
+  
+  if (!title) { 
+    alert('Lesson needs a title'); 
+    return; 
   }
+  
+  const lesson = {
+    id: uid('lesson'),
+    title: title,
+    modelUrl: modelUrl || null,
+    explanation: explanation,
+    quiz: null
+  };
+  
+  if (!modelUrl && sessionUploadedModel) {
+    if (sessionUploadedModel.base64) {
+      lesson.modelBase64 = sessionUploadedModel.base64;
+      lesson.modelFilename = sessionUploadedModel.filename;
+    } else {
+      lesson.modelUrl = sessionUploadedModel.url;
+    }
+  }
+  
+  if (qText && qOpts) {
+    lesson.quiz = {
+      question: qText,
+      options: qOpts.split(',').map(s => s.trim()),
+      answerIndex: isNaN(qAns) ? 0 : qAns
+    };
+  }
+  
+  lessons.push(lesson);
+  saveLessons();
+  renderLessons();
+  renderMarkerRow();
+  
+  document.getElementById('lessonTitle').value = '';
+  document.getElementById('lessonModelUrl').value = '';
+  document.getElementById('lessonExplanation').value = '';
+  document.getElementById('quizQuestionInput').value = '';
+  document.getElementById('quizOptionsInput').value = '';
+  document.getElementById('quizAnswerInput').value = '';
+  
+  status.textContent = 'Status: Lesson added successfully!';
+  alert('Lesson added successfully!');
+});
 
-  // Photo capture functionality
-  photoBtn.addEventListener('click', () => {
-    // Create canvas to capture the stage
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-    
-    canvas.width = stage.offsetWidth;
-    canvas.height = stage.offsetHeight;
-    
-    // Draw video frame
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
-    // If model is visible, we need to capture it too
-    // Note: model-viewer uses WebGL so we can't directly capture it to canvas
-    // This will capture the video/camera feed
-    
-    // Flash effect
-    photoFlash.classList.add('active');
-    setTimeout(() => photoFlash.classList.remove('active'), 300);
-    
-    // Convert to image and download
-    canvas.toBlob((blob) => {
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `holoclass-capture-${Date.now()}.png`;
-      link.click();
-      URL.revokeObjectURL(url);
-      status.textContent = 'Status: Photo saved!';
-      setTimeout(() => {
-        status.textContent = 'Status: Camera active';
-      }, 2000);
-    });
-  });
+document.getElementById('clearLessons').addEventListener('click', () => {
+  if (confirm('Clear all lessons and progress? This cannot be undone.')) {
+    lessons = [];
+    progress = {};
+    saveLessons();
+    saveProgress();
+    renderLessons();
+    renderMarkerRow();
+    status.textContent = 'Status: All lessons cleared';
+  }
+});
+
+document.getElementById('closeHome').addEventListener('click', () => {
+  homeOverlay.style.display = 'none';
+});
+
+document.getElementById('openGenerator').addEventListener('click', () => {
+  window.open('holoclass-generator.html', '_blank');
+});
+
+document.getElementById('btnHome').addEventListener('click', () => {
+  homeOverlay.style.display = 'flex';
+  renderLessons('all', document.getElementById('searchInput').value);
+});
+
+document.getElementById('btnProgress').addEventListener('click', () => {
+  homeOverlay.style.display = 'flex';
+  renderLessons('all', document.getElementById('searchInput').value);
+});
+
+document.getElementById('btnTeacher').addEventListener('click', () => {
+  homeOverlay.style.display = 'flex';
+  const panel = document.getElementById('teacherPanel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+});
+
+document.getElementById('toggleTeacherView').addEventListener('click', () => {
+  teacherPanel.style.display = 'none';
+});
+
+document.getElementById('importSample').addEventListener('click', () => {
+  if (lessons.length > 0 && !confirm('This will add sample lessons. Continue?')) return;
+  
+  const samples = [
+    {
+      id: uid('sample'),
+      title: 'Astronaut',
+      modelUrl: 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
+      explanation: 'Astronauts are trained professionals who travel to space to conduct research and exploration.',
+      quiz: {
+        question: 'What do astronauts do in space?',
+        options: ['Sleep only', 'Conduct research and exploration', 'Play games', 'Watch TV'],
+        answerIndex: 1
+      }
+    },
+    {
+      id: uid('sample'),
+      title: 'Neil Armstrong',
+      modelUrl: 'https://modelviewer.dev/shared-assets/models/NeilArmstrong.glb',
+      explanation: 'Neil Armstrong was the first human to walk on the Moon during the Apollo 11 mission in 1969.',
+      quiz: {
+        question: 'Who was the first person to walk on the Moon?',
+        options: ['Buzz Aldrin', 'Neil Armstrong', 'Yuri Gagarin', 'John Glenn'],
+        answerIndex: 1
+      }
+    },
+    {
+      id: uid('sample'),
+      title: 'Helmet',
+      modelUrl: 'https://modelviewer.dev/shared-assets/models/glTF-Sample-Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf',
+      explanation: 'Space helmets protect astronauts from the vacuum of space and provide life support.',
+      quiz: {
+        question: 'What does a space helmet provide?',
+        options: ['Style', 'Protection and life support', 'Communication only', 'Nothing'],
+        answerIndex: 1
+      }
+    }
+  ];
+  
+  lessons = lessons.concat(samples);
+  saveLessons();
+  renderLessons();
+  renderMarkerRow();
+  status.textContent = 'Status: Sample lessons imported!';
+  alert('Sample lessons imported successfully!');
+});
+
+document.getElementById('searchInput').addEventListener('input', (e) => {
+  renderLessons('all', e.target.value);
+});
+
+document.getElementById('viewAll').addEventListener('click', () => {
+  renderLessons('all', document.getElementById('searchInput').value);
+});
+
+document.getElementById('viewIncomplete').addEventListener('click', () => {
+  renderLessons('incomplete', document.getElementById('searchInput').value);
+});
+
+document.getElementById('viewComplete').addEventListener('click', () => {
+  renderLessons('complete', document.getElementById('searchInput').value);
+});
+
+renderLessons();
+renderMarkerRow();
+homeOverlay.style.display = 'flex';
+
+console.log('HoloClass v3 loaded - CSV import & model URLs working');
 </script>
 </body>
 </html>
